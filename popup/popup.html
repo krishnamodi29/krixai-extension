@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KrixAI</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="popup-root">
+      <header class="header">
+        <h1 class="logo">KrixAI</h1>
+        <button id="settingsToggle" class="icon-button" title="Settings" aria-label="Open settings">
+          ⚙
+        </button>
+      </header>
+
+      <section id="mainView">
+        <div class="mode-pills">
+          <button class="pill active" data-mode="technical">Technical</button>
+          <button class="pill" data-mode="creative">Creative</button>
+          <button class="pill" data-mode="analytical">Analytical</button>
+        </div>
+
+        <button id="enhanceBtn" class="enhance-btn">Enhance ✦</button>
+
+        <div id="spinner" class="spinner hidden" aria-hidden="true"></div>
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="panel">
+          <h3>Your prompt</h3>
+          <pre id="rawPromptPanel" class="panel-content gray-border"></pre>
+        </div>
+
+        <div class="panel">
+          <h3>KrixAI version</h3>
+          <pre id="enhancedPromptPanel" class="panel-content pink-border"></pre>
+        </div>
+
+        <div class="result-row">
+          <span id="scoreBadge" class="score-badge hidden"></span>
+        </div>
+
+        <div class="panel">
+          <h3>DNA improvements</h3>
+          <ul id="dnaList" class="dna-list"></ul>
+        </div>
+      </section>
+
+      <section id="settingsView" class="hidden">
+        <h2>Settings</h2>
+        <label for="apiKeyInput">Groq API Key</label>
+        <input id="apiKeyInput" type="password" placeholder="Paste your API key" />
+        <label for="groqApiKeyInput">Groq API Key (faster, recommended)</label>
+        <input id="groqApiKeyInput" type="password" placeholder="Paste your Groq API key" />
+        <button id="saveApiKeyBtn" class="enhance-btn">Save API Key</button>
+        <button id="backBtn" class="secondary-btn">Back</button>
+      </section>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "KrixAI",
+  "version": "1.0.9",
+  "description": "Enhance prompts across major AI platforms with KrixAI.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://www.perplexity.ai/*",
+    "https://grok.x.ai/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.groq.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "KrixAI"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
+        "https://grok.x.ai/*"
+      ],
+      "js": ["content/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
