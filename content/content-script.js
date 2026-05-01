@@ -1,16 +1,42 @@
 const FLOATING_BUTTON_ID = "krixai-floating-enhance";
 const SUPPORTED_PLATFORMS = ["chatgpt", "claude", "gemini", "perplexity", "grok"];
-const SELECTORS_BY_PLATFORM = {
+const PLATFORM_SELECTORS = {
   chatgpt: [
-    "#prompt-textarea",
-    "div[contenteditable='true'][data-virtualkeyboard-exclusion]",
-    "form div[contenteditable='true']"
+    '#prompt-textarea',
+    'div#prompt-textarea',
+    'div[contenteditable="true"][data-virtualkeyboard-exclusion]',
+    'div[contenteditable="true"].ProseMirror',
+    'textarea[data-id="root"]',
+    'div[contenteditable="true"]'
   ],
-  claude: [".ProseMirror", "div[contenteditable='true']"],
-  gemini: [".ql-editor", "div[contenteditable='true']", "rich-textarea div"],
-  perplexity: ["textarea", "div[contenteditable='true']"],
-  grok: ["textarea", "div[contenteditable='true']"]
+  claude: [
+    '.ProseMirror',
+    'div[contenteditable="true"]',
+    'div[aria-label="Write your prompt to Claude"]'
+  ],
+  gemini: [
+    '.ql-editor',
+    'rich-textarea div[contenteditable="true"]',
+    'div[contenteditable="true"]'
+  ],
+  perplexity: [
+    'textarea',
+    'div[contenteditable="true"]'
+  ],
+  grok: [
+    'textarea',
+    'div[contenteditable="true"]'
+  ]
 };
+
+function findTextarea(platform) {
+  const selectors = PLATFORM_SELECTORS[platform] || ['textarea', 'div[contenteditable="true"]'];
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+  }
+  return null;
+}
 
 /** @type {HTMLElement|null} */
 let activeField = null;
@@ -30,7 +56,7 @@ function detectPlatform(url) {
   if (!url || typeof url !== "string") {
     return "unknown";
   }
-  if (url.includes("chat.openai.com")) return "chatgpt";
+  if (url.includes("chatgpt.com") || url.includes("chat.openai.com")) return "chatgpt";
   if (url.includes("claude.ai")) return "claude";
   if (url.includes("gemini.google.com")) return "gemini";
   if (url.includes("perplexity.ai")) return "perplexity";
@@ -91,7 +117,7 @@ function resolveEditableTarget(target) {
  */
 function findPromptField() {
   const platform = getCurrentPlatform();
-  const selectors = SELECTORS_BY_PLATFORM[platform] || [];
+  const selectors = PLATFORM_SELECTORS[platform] || [];
   for (const selector of selectors) {
     const found = document.querySelector(selector);
     if (isEditableElement(found)) {
@@ -123,12 +149,20 @@ function getElementValue(element) {
 function setElementValue(element, value) {
   if (!element) return;
   if ("value" in element) {
-    /** @type {HTMLTextAreaElement} */ (element).value = value;
+    element.value = value;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
   } else {
-    element.textContent = value;
+    element.focus();
+    document.execCommand('selectAll', false, null);
+    document.execCommand('insertText', false, value);
+    if (!element.textContent.includes(value.substring(0, 20))) {
+      element.textContent = value;
+      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    }
   }
   element.dispatchEvent(new Event("input", { bubbles: true }));
 }
+
 
 /**
  * Sends prompt to background orchestrator.
@@ -183,30 +217,31 @@ function injectFloatingStyles() {
   style.id = "krixai-floating-style";
   style.textContent = `
     #${FLOATING_BUTTON_ID} {
-      position: absolute;
-      right: 8px;
-      bottom: 8px;
-      width: 36px;
-      height: 36px;
-      border: 1px solid #ffd2e0;
-      border-radius: 999px;
-      background: #ffffff;
-      color: #ff3366;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 10px;
-      font-weight: 700;
-      font-size: 13px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-      opacity: 0;
-      transform: scale(0.92);
-      transition: width 0.22s ease, opacity 0.18s ease, transform 0.18s ease, background 0.2s ease, color 0.2s ease;
-      z-index: 2147483646;
-      overflow: hidden;
-      white-space: nowrap;
-    }
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    width: auto;
+    min-width: 120px;
+    padding: 0 14px;
+    height: 36px;
+    background: linear-gradient(90deg, #ff3366, #ff8c42);
+    color: white;
+    border: none;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 4px 14px rgba(255, 51, 102, 0.35);
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 2147483646;
+    white-space: nowrap;
+  }
     #${FLOATING_BUTTON_ID}.visible {
       opacity: 1;
       transform: scale(1);
@@ -231,9 +266,9 @@ function injectFloatingStyles() {
       margin-right: 6px;
     }
     #${FLOATING_BUTTON_ID} .krixai-label {
-      opacity: 0;
-      max-width: 0;
-      transition: opacity 0.18s ease, max-width 0.18s ease;
+      opacity: 1;
+      max-width: 100px;
+      #transition: opacity 0.18s ease, max-width 0.18s ease;
       font-size: 12px;
     }
     #${FLOATING_BUTTON_ID}:hover .krixai-label,
@@ -340,31 +375,42 @@ function ensureAnchor(field) {
  * @param {HTMLElement} field - Target field.
  */
 function showFloatingButton(field) {
-  if (!field || !isSupportedPage()) {
-    return;
-  }
+  if (!field || !isSupportedPage()) return;
   clearHideTimer();
   activeField = field;
   const button = ensureFloatingButton();
-  const anchor = ensureAnchor(field);
-  let anchored = false;
-  if (anchor && document.contains(anchor)) {
-    if (button.parentElement !== anchor) {
-      anchor.appendChild(button);
-    }
-    button.style.position = "absolute";
-    button.style.bottom = "8px";
-    button.style.right = "8px";
-    anchored = true;
+
+  if (button.parentElement !== document.body) {
+    document.body.appendChild(button);
   }
-  if (!anchored) {
-    if (button.parentElement !== document.body) {
-      document.body.appendChild(button);
-    }
+
+  function positionButton() {
+    const rect = field.getBoundingClientRect();
+    const platform = getCurrentPlatform();
+    
+    // Adjust vertical offset per platform
+    const offsets = {
+      chatgpt: -8,
+      claude: -8,
+      gemini: 0,
+      perplexity: 0,
+      grok: 0
+    };
+    
+    const verticalOffset = offsets[platform] || 0;
+    
     button.style.position = "fixed";
-    button.style.bottom = "80px";
-    button.style.right = "20px";
+    button.style.top = (rect.top + (rect.height / 2) - 18 + verticalOffset) + "px";
+    button.style.left = (rect.right - 130) + "px";
+    button.style.right = "auto";
+    button.style.bottom = "auto";
   }
+
+  positionButton();
+  window._krixaiPositioner = positionButton;
+  window.addEventListener('scroll', positionButton, { passive: true });
+  window.addEventListener('resize', positionButton, { passive: true });
+
   requestAnimationFrame(() => {
     button.classList.add("visible");
   });
@@ -374,12 +420,14 @@ function showFloatingButton(field) {
  * Hides floating button.
  */
 function hideFloatingButton() {
-  if (!floatingButton) {
-    return;
-  }
+  if (!floatingButton) return;
   floatingButton.classList.remove("visible", "expanded");
+  if (window._krixaiPositioner) {
+    window.removeEventListener('scroll', window._krixaiPositioner);
+    window.removeEventListener('resize', window._krixaiPositioner);
+    window._krixaiPositioner = null;
+  }
 }
-
 /**
  * Delays hiding floating button to allow click.
  */
@@ -422,6 +470,7 @@ async function onEnhanceClick(event) {
     if (result.contextInvalidated) {
       const label = button.querySelector(".krixai-label");
       if (label) label.textContent = "Enhance ✦";
+      showButtonTooltip("Page refreshed needed — press Cmd+R");
       return;
     }
     if (!result.success) {
